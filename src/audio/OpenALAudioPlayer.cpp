@@ -28,16 +28,40 @@ OpenALAudioPlayer::~OpenALAudioPlayer() {
 ALenum OpenALAudioPlayer::GetOpenALFormat() {
     // Determine the appropriate OpenAL format based on channel configuration
     // We use 16-bit signed integer samples (S16) to match the game's audio format
+    
+    // Note: 5.1 surround (AL_FORMAT_51CHN16) requires specific channel ordering
+    // and may not work reliably on all systems even with AL_EXT_MCFORMATS.
+    // For now, we use stereo which is universally supported.
+    // TODO: Investigate proper 5.1 support with correct channel ordering
+    
     if (GetAudioChannels() == AudioChannelsSetting::audioSurround51) {
-        mNumChannels = 6;
-        // Check if 5.1 surround is supported
+        // Check if 5.1 surround is actually supported and working
         if (alIsExtensionPresent("AL_EXT_MCFORMATS")) {
-            return AL_FORMAT_51CHN16;
+            // Test if AL_FORMAT_51CHN16 is actually valid by checking if
+            // alGetEnumValue returns a non-zero value
+            ALenum format51 = alGetEnumValue("AL_FORMAT_51CHN16");
+            if (format51 != 0 && format51 != AL_INVALID_ENUM) {
+                // Try to create a small test buffer to verify the format works
+                ALuint testBuffer;
+                alGenBuffers(1, &testBuffer);
+                if (alGetError() == AL_NO_ERROR) {
+                    // Small silent test data (6 channels * 2 bytes * 8 samples)
+                    int16_t testData[6 * 8] = {0};
+                    alBufferData(testBuffer, format51, testData, sizeof(testData), 32000);
+                    ALenum error = alGetError();
+                    alDeleteBuffers(1, &testBuffer);
+                    
+                    if (error == AL_NO_ERROR) {
+                        mNumChannels = 6;
+                        SPDLOG_INFO("OpenAL: Using 5.1 surround format (0x{:X})", format51);
+                        return format51;
+                    } else {
+                        SPDLOG_WARN("OpenAL: 5.1 format test failed (error: 0x{:X}), falling back to stereo", error);
+                    }
+                }
+            }
         }
-        // Fallback to stereo if 5.1 is not supported
-        SPDLOG_WARN("OpenAL: 5.1 surround not supported, falling back to stereo");
-        mNumChannels = 2;
-        return AL_FORMAT_STEREO16;
+        SPDLOG_WARN("OpenAL: 5.1 surround not available, using stereo");
     }
     
     mNumChannels = 2;
@@ -45,6 +69,8 @@ ALenum OpenALAudioPlayer::GetOpenALFormat() {
 }
 
 bool OpenALAudioPlayer::DoInit() {
+    SPDLOG_INFO("OpenAL AudioPlayer: Starting initialization");
+    
     // Open the default audio device
     mDevice = alcOpenDevice(nullptr);
     if (mDevice == nullptr) {
@@ -60,7 +86,7 @@ bool OpenALAudioPlayer::DoInit() {
     if (deviceName == nullptr || alcGetError(mDevice) != ALC_NO_ERROR) {
         deviceName = alcGetString(mDevice, ALC_DEVICE_SPECIFIER);
     }
-    SPDLOG_INFO("OpenAL: Opened device \"{}\"", deviceName ? deviceName : "unknown");
+    SPDLOG_INFO("OpenAL AudioPlayer: Opened device \"{}\"", deviceName ? deviceName : "unknown");
     
     // Create and activate an audio context
     mContext = alcCreateContext(mDevice, nullptr);
@@ -80,13 +106,18 @@ bool OpenALAudioPlayer::DoInit() {
         return false;
     }
     
+    // Clear any pending errors
+    alGetError();
+    
     // Get the appropriate format for our channel configuration
     mFormat = GetOpenALFormat();
+    SPDLOG_INFO("OpenAL AudioPlayer: Using format 0x{:X} with {} channels", mFormat, mNumChannels);
     
     // Generate buffers for streaming
     alGenBuffers(NUM_OPENAL_BUFFERS, mBuffers);
-    if (alGetError() != AL_NO_ERROR) {
-        SPDLOG_ERROR("OpenAL: Failed to generate buffers");
+    ALenum error = alGetError();
+    if (error != AL_NO_ERROR) {
+        SPDLOG_ERROR("OpenAL: Failed to generate buffers (error: 0x{:X})", error);
         return false;
     }
     
@@ -97,8 +128,9 @@ bool OpenALAudioPlayer::DoInit() {
     
     // Generate a source for playback
     alGenSources(1, &mSource);
-    if (alGetError() != AL_NO_ERROR) {
-        SPDLOG_ERROR("OpenAL: Failed to generate source");
+    error = alGetError();
+    if (error != AL_NO_ERROR) {
+        SPDLOG_ERROR("OpenAL: Failed to generate source (error: 0x{:X})", error);
         alDeleteBuffers(NUM_OPENAL_BUFFERS, mBuffers);
         return false;
     }
@@ -109,7 +141,7 @@ bool OpenALAudioPlayer::DoInit() {
     alSourcei(mSource, AL_SOURCE_RELATIVE, AL_TRUE);
     alSourcef(mSource, AL_ROLLOFF_FACTOR, 0.0f);
     
-    SPDLOG_INFO("OpenAL: Initialized with {} channels at {} Hz", 
+    SPDLOG_INFO("OpenAL AudioPlayer: Initialized with {} channels at {} Hz", 
                 mNumChannels, GetSampleRate());
     
     return true;

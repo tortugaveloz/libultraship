@@ -28,6 +28,7 @@ void Audio::InitAudioPlayer() {
         if (!mAudioPlayer->Init()) {
             // Failed to initialize system audio player.
             // Fallback to SDL if the native system player does not work.
+            SPDLOG_WARN("Audio: Primary audio player failed to initialize, falling back to SDL");
             SetCurrentAudioBackend(AudioBackend::SDL);
             mAudioPlayer = std::make_shared<SDLAudioPlayer>(this->mAudioSettings);
             mAudioPlayer->Init();

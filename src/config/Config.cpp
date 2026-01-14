@@ -235,6 +235,7 @@ nlohmann::json Config::GetNestedJson() {
 
 AudioBackend Config::GetCurrentAudioBackend() {
     std::string backendName = GetString("Window.AudioBackend");
+    
     if (backendName == "wasapi") {
         return AudioBackend::WASAPI;
     }

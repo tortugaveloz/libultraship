@@ -2,6 +2,7 @@
 
 #include "public/bridge/resourcebridge.h"
 #include "public/bridge/audiobridge.h"
+#include "public/bridge/audio3dbridge.h"
 #include "public/bridge/controllerbridge.h"
 #include "public/bridge/windowbridge.h"
 #include "public/bridge/consolevariablebridge.h"
