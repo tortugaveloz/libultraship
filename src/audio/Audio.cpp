@@ -2,6 +2,7 @@
 
 #include "Context.h"
 #include "controller/controldeck/ControlDeck.h"
+#include "OpenALAudioPlayer.h"
 
 namespace Ship {
 
@@ -16,6 +17,9 @@ void Audio::InitAudioPlayer() {
             mAudioPlayer = std::make_shared<WasapiAudioPlayer>(this->mAudioSettings);
             break;
 #endif
+        case AudioBackend::OPENALSOFT:
+            mAudioPlayer = std::make_shared<OpenALAudioPlayer>(this->mAudioSettings);
+            break;
         default:
             mAudioPlayer = std::make_shared<SDLAudioPlayer>(this->mAudioSettings);
     }
@@ -37,6 +41,7 @@ void Audio::Init() {
     mAvailableAudioBackends->push_back(AudioBackend::WASAPI);
 #endif
     mAvailableAudioBackends->push_back(AudioBackend::SDL);
+    mAvailableAudioBackends->push_back(AudioBackend::OPENALSOFT);
 
     SetCurrentAudioBackend(Context::GetInstance()->GetConfig()->GetCurrentAudioBackend());
 }

@@ -217,6 +217,17 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
     target_link_libraries(libultraship PRIVATE ${OSX_FOUNDATION} ${OSX_AVFOUNDATION} ${METAL} ${QUARTZCORE} ${CMAKE_DL_LIBS})
 endif()
 
+if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    # OpenAL Soft support
+    if(DEFINED OPENAL_INCLUDE_DIR AND DEFINED OPENAL_LIBRARY)
+        target_include_directories(libultraship PRIVATE ${OPENAL_INCLUDE_DIR})
+        target_link_libraries(libultraship PRIVATE ${OPENAL_LIBRARY})
+    else()
+        find_package(OpenAL REQUIRED)
+        target_link_libraries(libultraship PRIVATE OpenAL::OpenAL)
+    endif()
+endif()
+
 if (USE_OPENGLES)
     if (CMAKE_SYSTEM_NAME STREQUAL "Android")
         find_library(OPENGLES_LIBRARY GLESv3)
