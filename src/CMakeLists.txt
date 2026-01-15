@@ -222,6 +222,14 @@ if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     if(DEFINED OPENAL_INCLUDE_DIR AND DEFINED OPENAL_LIBRARY)
         target_include_directories(libultraship PRIVATE ${OPENAL_INCLUDE_DIR})
         target_link_libraries(libultraship PRIVATE ${OPENAL_LIBRARY})
+        # Static OpenAL needs CoreAudio and AudioToolbox frameworks
+        find_library(COREAUDIO_FRAMEWORK CoreAudio REQUIRED)
+        find_library(AUDIOTOOLBOX_FRAMEWORK AudioToolbox REQUIRED)
+        find_library(COREFOUNDATION_FRAMEWORK CoreFoundation REQUIRED)
+        target_link_libraries(libultraship PRIVATE 
+            ${COREAUDIO_FRAMEWORK} 
+            ${AUDIOTOOLBOX_FRAMEWORK}
+            ${COREFOUNDATION_FRAMEWORK})
     else()
         find_package(OpenAL REQUIRED)
         target_link_libraries(libultraship PRIVATE OpenAL::OpenAL)

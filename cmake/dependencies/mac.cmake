@@ -42,21 +42,27 @@ set_target_properties(ImGui PROPERTIES
 )
 
 #=================== OpenAL Soft ===================
-# Use OpenAL Soft from parent directory for consistent API (AL/al.h instead of OpenAL/al.h)
-set(OPENAL_SOFT_DIR "${CMAKE_SOURCE_DIR}/../openal-soft")
-if(EXISTS "${OPENAL_SOFT_DIR}")
+# Use pre-built OpenAL Soft from submodule for consistent API (AL/al.h instead of OpenAL/al.h)
+# Note: OpenAL Soft should be built separately to avoid header conflicts with libultraship
+set(OPENAL_SOFT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/extern/openal-soft")
+set(OPENAL_SOFT_BUILD_DIR "${OPENAL_SOFT_DIR}/build")
+if(EXISTS "${OPENAL_SOFT_DIR}/include/AL/al.h")
     set(OPENAL_INCLUDE_DIR "${OPENAL_SOFT_DIR}/include")
-    # Check if openal-soft has been built
-    if(EXISTS "${OPENAL_SOFT_DIR}/build/libopenal.dylib")
-        set(OPENAL_LIBRARY "${OPENAL_SOFT_DIR}/build/libopenal.dylib")
-    elseif(EXISTS "${OPENAL_SOFT_DIR}/build/libopenal.a")
-        set(OPENAL_LIBRARY "${OPENAL_SOFT_DIR}/build/libopenal.a")
+    # Check for pre-built library
+    if(EXISTS "${OPENAL_SOFT_BUILD_DIR}/libopenal.a")
+        set(OPENAL_LIBRARY "${OPENAL_SOFT_BUILD_DIR}/libopenal.a")
+        message(STATUS "Using pre-built OpenAL Soft from submodule: ${OPENAL_LIBRARY}")
+    elseif(EXISTS "${OPENAL_SOFT_BUILD_DIR}/libopenal.dylib")
+        set(OPENAL_LIBRARY "${OPENAL_SOFT_BUILD_DIR}/libopenal.dylib")
+        message(STATUS "Using pre-built OpenAL Soft from submodule: ${OPENAL_LIBRARY}")
     else()
-        message(WARNING "OpenAL Soft found but not built. Please build openal-soft first.")
+        message(WARNING "OpenAL Soft submodule found but not built. Please run:")
+        message(WARNING "  cd ${OPENAL_SOFT_DIR} && mkdir -p build && cd build && cmake -DLIBTYPE=STATIC .. && make")
         # Fall back to system OpenAL
         find_package(OpenAL REQUIRED)
     endif()
 else()
+    message(WARNING "OpenAL Soft submodule not found. Using system OpenAL.")
     # Fall back to system OpenAL (uses OpenAL/al.h on macOS)
     find_package(OpenAL REQUIRED)
 endif()
